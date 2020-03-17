@@ -2,17 +2,24 @@ package com.niccher.myxkcd;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.app.Dialog;
 import android.app.ProgressDialog;
+import android.content.Context;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 
-import com.bumptech.glide.Glide;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.squareup.picasso.Callback;
+import com.squareup.picasso.NetworkPolicy;
+import com.squareup.picasso.Picasso;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -28,11 +35,14 @@ public class MainActivity extends AppCompatActivity {
 
     private Button btn_prev, btn_next;
     private FloatingActionButton fab_sav;
-    private ImageView imview;
-
+    private ImageView imview,popimg;
+    private TextView popclos;
     String imgurl;
 
     ProgressDialog pds;
+    Dialog myInfo;
+
+    Context cnt;
 
     ArrayList<String> urlimg = new ArrayList<String>();
     ArrayList<String> urlname = new ArrayList<String>();
@@ -48,6 +58,7 @@ public class MainActivity extends AppCompatActivity {
         imview = findViewById(R.id.imgvw);
 
         pds=new ProgressDialog(this);
+        myInfo = new Dialog(this);
 
         btn_prev.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -70,6 +81,13 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        imview.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Poping();
+            }
+        });
+
         InitParsers();
     }
 
@@ -87,7 +105,7 @@ public class MainActivity extends AppCompatActivity {
 
                 try {
                     Document doc = Jsoup.connect(url).get();
-                    Log.e("File Title >", String.valueOf(doc.title())+"\n");
+                    Log.e("File Title >", doc.title() +"\n");
                     Elements divs=doc.select("div.box");//"a[src]"
 
                     String[] urllink,urlinmini;
@@ -119,13 +137,53 @@ public class MainActivity extends AppCompatActivity {
         }).start();
     }
 
-    private void LoadImage(String urlPath){
+    private void LoadImage(final String urlPath){
         try {
-            Glide.with(MainActivity.this)
-                    .load(urlPath)
-                    .into(imview);
+            Picasso.get().load(urlPath).networkPolicy(NetworkPolicy.OFFLINE).into(imview, new Callback() {
+                @Override
+                public void onSuccess() {}
+
+                @Override
+                public void onError(Exception e) {
+                    Picasso.get().load(urlPath).into(imview);
+                }
+            });
         }catch (Exception ex){
             Log.e("-----LoadImage----", ex.getMessage()+"\n\n");
+            Toast.makeText(this, "Missing Image data\n"+ex.getMessage(), Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private void Poping() {
+        try {
+            myInfo.setContentView(R.layout.part_poppa);
+            popclos= myInfo.findViewById(R.id.popclose);
+            popimg= myInfo.findViewById(R.id.popimg);
+            popclos.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    myInfo.dismiss();
+                }
+            });
+
+            try {
+                Picasso.get().load(imgurl).networkPolicy(NetworkPolicy.OFFLINE).into(popimg, new Callback() {
+                    @Override
+                    public void onSuccess() {}
+
+                    @Override
+                    public void onError(Exception e) {
+                        Picasso.get().load(imgurl).into(popimg);
+                    }
+                });
+            }catch (Exception ex){
+                Log.e("-----Poping----", ex.getMessage()+"\n\n");
+                Toast.makeText(this, "Missing Image data\n"+ex.getMessage(), Toast.LENGTH_LONG).show();
+            }
+            myInfo.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+            myInfo.show();
+        }catch ( Exception pop){
+            Toast.makeText(this, "Missing Image to display", Toast.LENGTH_SHORT).show();
         }
     }
 
